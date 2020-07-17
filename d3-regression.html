@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Helvetica Neue", sans-serif;
+      }
+      #bandwidth {
+        position: absolute;
+        left: 100px;
+      }
+      .loess-line {
+        fill: none;
+        stroke-width: 2px;
+        stroke: steelblue;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="bandwidth">
+      <div>Bandwidth: <span class="bandwidth"></span></div>
+      <input type="range" min="0" max="100" value="25" />
+    </div>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://unpkg.com/d3-regression@1.3.4/dist/d3-regression.min.js"></script>
+    <script>
+   
+    /* Code has been translated from this source:                                  */
+    /* https://bl.ocks.org/HarryStevens/397a50a604666957e661e4c725c1022a           */
+    /*Alteration from using src="https://unpkg.com/science@1.9.3/science.v1.min.js"*/
+    /*to using d3-regression module                                                */
+      var x_property = "year", y_property = "value";
+    //create margins
+      var margin = {left: 30, right: 5, top: 5, bottom: 20},
+          aspect_ratio = .68,
+          width,
+          height;
+    //set scale
+      var x_scale = d3.scaleLinear();
+      var y_scale = d3.scaleLinear();
+    //axis generator
+      var x_axis_generator = d3.axisBottom().tickFormat(d => d)
+      var y_axis_generator = d3.axisLeft();
+    //define regression function with x and y attributes
+      var loessRegression = d3.regressionLoess().x(d=>d[0]).y(d=>d[1])
+    //define line generator for resulting array from loessRegression()
+      var line_generator = d3.line()
+        .x(d => x_scale(d[0]))
+        .y(d => y_scale(d[1]));
+
+      var input = d3.select("input");
+      var svg = d3.select("body").append("svg");
+      var g = svg.append("g");
+
+      var x_axis = g.append("g");
+      var y_axis = g.append("g");
+
+      d3.json("data.json").then(data => {
+        //generate iterable list of x and y values
+        var x_values = data.map(d => d[x_property]);
+        var y_values = data.map(d => d[y_property]);
+        console.log(x_values)
+        console.log(y_values)
+        var xy = d3.zip(x_values,y_values)//zip values for loess usage
+        console.log(xy)
+        x_scale.domain(d3.extent(x_values));
+        y_scale.domain(d3.extent(y_values));
+          
+          //append scatter points
+        var points = g.selectAll("circle")
+            .data(data)
+          .enter().append("circle")
+            .attr("r", 3);
+          
+          //respond to page resizing and bandwidth slider
+        function draw(resizing, adjusting){
+          if (resizing){
+            width = window.innerWidth - margin.left - margin.right;
+            height = d3.min([window.innerHeight, (width * aspect_ratio)]) - margin.top - margin.bottom;
+              
+            //new scales for resized window
+            x_scale.range([0, width]);
+            y_scale.range([height, 0]);
+            
+            //new axis label for resized window
+            x_axis_generator.scale(x_scale);
+            y_axis_generator.scale(y_scale);
+
+            //resize svg to fit window
+            svg.attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom);
+
+            g.attr("transform", "translate(" + [margin.left, margin.top] + ")");
+            
+            //draw axes
+            x_axis.attr("transform", "translate(0, " + height + ")")
+                .call(x_axis_generator);
+
+            y_axis.call(y_axis_generator);
+
+            points.attr("transform", d => "translate(" + [x_scale(d[x_property]), y_scale(d[y_property])] + ")");
+          }
+          //respond to bandwidth slider
+          if (adjusting){
+            var new_bandwidth = input.property("value") / 100;
+            d3.select(".bandwidth").html(new_bandwidth.toFixed(2));
+            loessRegression.bandwidth(new_bandwidth);
+            loessRegVal = loessRegression(xy);
+          }
+        //generate the regression line 
+          var loess_line = g.selectAll(".loess-line")
+              .data([loessRegVal]);
+        //draw line on graph
+          loess_line.enter().append("path")
+              .attr("class", "loess-line")
+            .merge(loess_line)
+              .attr("d", line_generator);
+        }
+
+        draw(1, 1);
+        window.addEventListener("resize", _ => draw(1, 0));
+        input.on("input", _ => draw(0, 1));
+      });
+    </script>
+  </body>
+</html>

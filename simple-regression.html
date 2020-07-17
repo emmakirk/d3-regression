@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Helvetica Neue", sans-serif;
+      }
+      .loess-line {
+        fill: none;
+        stroke-width: 2px;
+        stroke: steelblue;
+      }
+      .linear-line {
+        fill: none;
+        stroke-width: 2px;
+        stroke: red;
+      }
+    </style>
+  </head>
+  <body>
+      <script src="https://d3js.org/d3.v5.min.js"></script>
+      <script src="https://unpkg.com/d3-regression@1.3.4/dist/d3-regression.min.js"></script>
+      <script>
+        /*code has been translated and modified from this source: https://observablehq.com/@harrystevens/introducing-d3-regression*/
+        /*discrepancies between embedded observable code and html/javasript led me to create my own examples by getting general ideas from observable*/
+          var margin = {top: 100, right: 40, bottom: 150, left: 100},
+            width = 760 - margin.left - margin.right, //remove margin values from width
+            height = 500 - margin.top - margin.bottom; //remove margin values from height
+          var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");//shift the svg by the margin values
+          //assign min max values to -4 and 16 and scale to width of graph
+          var xScale = d3.scaleLinear()
+                .domain([-4, 16])
+                .range([0, width]);
+          var xAxis = d3.axisBottom(xScale);
+          //assign min max values to -4 and 16 and scale to height of graph
+          var yScale = d3.scaleLinear()
+                .domain([-4, 16])
+                .range([height, 0]);
+          var yAxis = d3.axisLeft(yScale);
+          //array of xy values for each point
+          var dots = [{x: 8, y: 3}, {x: 2, y: 10},
+                      {x: 11, y: 3}, {x: 6, y: 6},
+                      {x: 5, y: 8}, {x: 4, y: 12},
+                      {x: 12, y: 1}, {x: 9, y: 4},
+                      {x: 6, y: 9}, {x: 1, y: 14}]
+         //append scatterplot points to the graph 
+          svg.selectAll('circle')
+            .data(dots)
+            .enter().append('circle')
+                .attr('r',3)
+                .attr('cx', d=> xScale(d.x))//map x values to scale
+                .attr('cy', d=> yScale(d.y));
+          //calculate the 
+          var linearRegression = d3.regressionLinear()
+                .x(d => d.x)
+                .y(d => d.y)
+                .domain([-1.7, 16]);
+          
+          var loessRegression = d3.regressionLoess()
+                .x(d => d.x)
+                .y(d => d.y)
+                .bandwidth(.1);
+          
+          var loess = loessRegression(dots)
+          console.log('loess return: ')
+          console.log(loess)
+          
+          var linear = linearRegression(dots)
+          console.log('linear return: ')
+          console.log(linear)
+          
+          var line = d3.line()
+            .x(d => xScale(d[0]))
+            .y(d => yScale(d[1]))
+
+        
+          svg.append('path')
+            .attr('class','linear-line')
+            .datum(linearRegression(dots))
+            .attr('d', line);
+          
+          svg.append('path')
+            .attr('class','loess-line')
+            .datum(loessRegression(dots))
+            .attr('d', line);
+          
+        svg.append("g")
+        .attr("class", "y axis")//define class as y axis 
+        .call(yAxis)
+          
+        svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")//scoot labels to bottom of graph
+        .call(xAxis)
+          
+          
+      </script>
+      
